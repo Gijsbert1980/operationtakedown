@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Platform Battle Game</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Press Start 2P', monospace;
+            background: #1a1a2e;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+        
+        #gameContainer {
+            position: relative;
+            background: #0f0f1e;
+            border: 4px solid #ff6b6b;
+            box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+        }
+        
+        #gameCanvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: -moz-crisp-edges;
+            image-rendering: crisp-edges;
+        }
+        
+        #characterSelect {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+        
+        .character-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 40px;
+            margin-top: 40px;
+            padding: 20px;
+        }
+        
+        .character-card {
+            background: rgba(255, 255, 255, 0.05);
+            border: 3px solid #ff6b6b;
+            border-radius: 10px;
+            padding: 30px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            min-width: 250px;
+        }
+        
+        .character-card:hover {
+            transform: scale(1.05);
+            border-color: #ffd93d;
+            box-shadow: 0 0 20px rgba(255, 217, 61, 0.5);
+        }
+        
+        .character-card img {
+            width: 80px;
+            height: 120px;
+            object-fit: contain;
+            image-rendering: pixelated;
+            margin-bottom: 15px;
+        }
+        
+        .character-card h3 {
+            color: #ffd93d;
+            font-size: 14px;
+            margin-bottom: 10px;
+        }
+        
+        .character-card p {
+            color: #fff;
+            font-size: 10px;
+            line-height: 1.5;
+        }
+        
+        h1 {
+            color: #ffd93d;
+            text-shadow: 3px 3px 0 #ff6b6b;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #fff;
+            font-size: 12px;
+            margin-bottom: 20px;
+        }
+        
+        #gameOver, #victory {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 40px;
+            border: 4px solid #ff6b6b;
+            border-radius: 10px;
+            text-align: center;
+            z-index: 20;
+            display: none;
+        }
+        
+        #gameOver h2, #victory h2 {
+            color: #ff6b6b;
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        
+        #victory h2 {
+            color: #6bff6b;
+        }
+        
+        button {
+            background: #ff6b6b;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 14px;
+            font-family: 'Press Start 2P', monospace;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #ffd93d;
+            transform: scale(1.05);
+        }
+        
+        #hud {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 12px;
+            z-index: 5;
+            text-shadow: 2px 2px 0 #000;
+        }
+    </style>
+</head>
+<body>
+    <div id="gameContainer">
+        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        
+        <audio id="soundtrack" loop>
+            <source src="soundtrack.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="playerShootSound">
+            <source src="shoot.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="enemyShootSound">
+            <source src="shootenemy.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="gameOverSound">
+            <source src="gameover.mp3" type="audio/mpeg">
+        </audio>
+        
+        <audio id="victorySound">
+            <source src="victory.mp3" type="audio/mpeg">
+        </audio>
+        
+        <div id="characterSelect">
+            <h1>PLATFORM BATTLE</h1>
+            <p class="subtitle">Choose Your Hero</p>
+            <div class="character-grid">
+                <div class="character-card" data-character="jason">
+                    <img id="jasonPreview" alt="Jason">
+                    <h3>JASON</h3>
+                    <p>Age: 11<br>Weapon: Gold Gauntlet<br>Outfit: Banana Suit</p>
+                </div>
+                <div class="character-card" data-character="joshua">
+                    <img id="joshuaPreview" alt="Joshua">
+                    <h3>JOSHUA</h3>
+                    <p>Age: 11<br>Weapon: Axe<br>Outfit: Black Tracksuit</p>
+                </div>
+                <div class="character-card" data-character="lars">
+                    <img id="larsPreview" alt="Lars">
+                    <h3>LARS</h3>
+                    <p>Age: 11<br>Weapon: Knife<br>Outfit: Jeans & Sweater</p>
+                </div>
+                <div class="character-card" data-character="ferre">
+                    <img id="ferrePreview" alt="Ferre">
+                    <h3>FERRE</h3>
+                    <p>Age: 12<br>Weapon: Iron Glove<br>Outfit: Jeans & T-Shirt</p>
+                </div>
+            </div>
+        </div>
+        
+        <div id="hud">
+            <div>HP: <span id="hpDisplay">100</span></div>
+            <div>Enemies: <span id="enemyCount">5</span></div>
+            <div>Score: <span id="scoreDisplay">0</span></div>
+        </div>
+        
+        <div id="gameOver">
+            <h2>GAME OVER</h2>
+            <p style="color: white; font-size: 12px;">Better luck next time!</p>
+            <button onclick="location.reload()">Try Again</button>
+        </div>
+        
+        <div id="victory">
+            <h2>VICTORY!</h2>
+            <p style="color: white; font-size: 12px;">You defeated all enemies!</p>
+            <button onclick="location.reload()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const TILE_SIZE = 32;
+        const GRAVITY = 0.5;
+        const JUMP_FORCE = -12;
+        const MOVE_SPEED = 4;
+        
+        // Game state
+        let gameState = {
+            selectedCharacter: null,
+            player: null,
+            enemies: [],
+            boss: null,
+            platforms: [],
+            projectiles: [],
+            score: 0,
+            enemiesDefeated: 0,
+            gameStarted: false,
+            bossSpawned: false
+        };
+        
+        // Input handling
+        const keys = {};
+        window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+        window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+        
+        // Load all images
+        const images = {
+            jason: new Image(),
+            joshua: new Image(),
+            lars: new Image(),
+            ferre: new Image(),
+            enemy1: new Image(),
+            enemy2: new Image(),
+            enemy3: new Image(),
+            boss1: new Image(),
+            boss2: new Image(),
+            boss3: new Image(),
+            tileBrick: new Image(),
+            tileGrass: new Image(),
+            flameshot: new Image(),
+            axe: new Image(),
+            ironbeam: new Image()
+        };
+        
+        // Set image sources to relative paths
+        images.jason.src = 'jason.png';
+        images.joshua.src = 'joshua.png';
+        images.lars.src = 'lars.png';
+        images.ferre.src = 'ferre.png';
+        images.enemy1.src = 'enemy1.png';
+        images.enemy2.src = 'enemy2.png';
+        images.enemy3.src = 'enemy3.png';
+        images.boss1.src = 'boss1.png';
+        images.boss2.src = 'boss2.png';
+        images.boss3.src = 'boss3.png';
+        images.tileBrick.src = 'tile_bricks.png';
+        images.tileGrass.src = 'tile_grass.png';
+        images.flameshot.src = 'flameshot.png';
+        images.axe.src = 'axe.png';
+        images.ironbeam.src = 'ironbeam.png';
+        
+        // Set preview images
+        document.getElementById('jasonPreview').src = images.jason.src;
+        document.getElementById('joshuaPreview').src = images.joshua.src;
+        document.getElementById('larsPreview').src = images.lars.src;
+        document.getElementById('ferrePreview').src = images.ferre.src;
+        
+        // Character class
+        class Player {
+            constructor(characterName) {
+                this.x = 100;
+                this.y = canvas.height - 200;
+                this.width = 50;
+                this.height = 80;
+                this.vx = 0;
+                this.vy = 0;
+                this.hp = 100;
+                this.maxHp = 100;
+                this.characterName = characterName;
+                this.image = images[characterName];
+                this.onGround = false;
+                this.attackCooldown = 0;
+                this.facingRight = true;
+            }
+            
+            update() {
+                // Movement
+                if (keys['ArrowLeft'] || keys['a']) {
+                    this.vx = -MOVE_SPEED;
+                    this.facingRight = false;
+                } else if (keys['ArrowRight'] || keys['d']) {
+                    this.vx = MOVE_SPEED;
+                    this.facingRight = true;
+                } else {
+                    this.vx = 0;
+                }
+                
+                // Jumping
+                if ((keys['ArrowUp'] || keys['w']) && this.onGround) {
+                    this.vy = JUMP_FORCE;
+                    this.onGround = false;
+                }
+                
+                // Attack
+                if (keys[' ']) {
+                    this.attack();
+                }
+                
+                // Apply gravity
+                this.vy += GRAVITY;
+                
+                // Update position
+                this.x += this.vx;
+                this.y += this.vy;
+                
+                // Check platform collisions
+                this.onGround = false;
+                for (let platform of gameState.platforms) {
+                    if (this.checkCollision(platform)) {
+                        if (this.vy > 0 && this.y + this.height - this.vy <= platform.y) {
+                            this.y = platform.y - this.height;
+                            this.vy = 0;
+                            this.onGround = true;
+                        }
+                    }
+                }
+                
+                // Boundaries
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > canvas.width) this.x = canvas.width - this.width;
+                if (this.y > canvas.height) {
+                    this.takeDamage(this.hp);
+                }
+                
+                // Update cooldown
+                if (this.attackCooldown > 0) this.attackCooldown--;
+            }
+            
+            attack() {
+                if (this.attackCooldown <= 0) {
+                    const projectile = {
+                        x: this.x + (this.facingRight ? this.width : 0),
+                        y: this.y + this.height / 2,
+                        width: 20,
+                        height: 10,
+                        vx: this.facingRight ? 8 : -8,
+                        damage: 20,
+                        rotation: 0,
+                        character: this.characterName
+                    };
+                    gameState.projectiles.push(projectile);
+                    this.attackCooldown = 20;
+                    
+                    // Play shoot sound
+                    const shootSound = document.getElementById('playerShootSound');
+                    shootSound.currentTime = 0; // Reset to start
+                    shootSound.volume = 0.6;
+                    shootSound.play().catch(e => console.log('Sound play failed'));
+                }
+            }
+            
+            checkCollision(obj) {
+                return this.x < obj.x + obj.width &&
+                       this.x + this.width > obj.x &&
+                       this.y < obj.y + obj.height &&
+                       this.y + this.height > obj.y;
+            }
+            
+            takeDamage(amount) {
+                this.hp -= amount;
+                if (this.hp <= 0) {
+                    this.hp = 0;
+                    gameOver();
+                }
+                updateHUD();
+            }
+            
+            draw() {
+                ctx.save();
+                if (!this.facingRight) {
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(this.image, -this.x - this.width, this.y, this.width, this.height);
+                } else {
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                ctx.restore();
+                
+                // Draw HP bar
+                ctx.fillStyle = 'red';
+                ctx.fillRect(this.x, this.y - 15, this.width, 5);
+                ctx.fillStyle = 'green';
+                ctx.fillRect(this.x, this.y - 15, this.width * (this.hp / this.maxHp), 5);
+            }
+        }
+        
+        // Enemy class
+        class Enemy {
+            constructor(type, x, y) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = 50;
+                this.height = 70;
+                this.hp = 40;
+                this.maxHp = 40;
+                this.vx = Math.random() > 0.5 ? 1 : -1;
+                this.vy = 0;
+                this.image = images[type];
+                this.attackCooldown = 0;
+                this.facingRight = this.vx > 0;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.vy += GRAVITY;
+                this.y += this.vy;
+                
+                // Update facing direction
+                if (this.vx > 0) this.facingRight = true;
+                if (this.vx < 0) this.facingRight = false;
+                
+                // Bounce off walls
+                if (this.x < 0 || this.x + this.width > canvas.width) {
+                    this.vx *= -1;
+                }
+                
+                // Platform collision
+                for (let platform of gameState.platforms) {
+                    if (this.checkCollision(platform)) {
+                        if (this.vy > 0 && this.y + this.height - this.vy <= platform.y) {
+                            this.y = platform.y - this.height;
+                            this.vy = 0;
+                        }
+                    }
+                }
+                
+                // Check if player jumped on enemy
+                const player = gameState.player;
+                if (player && this.checkCollision(player)) {
+                    // Player is above enemy and falling down
+                    if (player.vy > 0 && player.y < this.y + this.height / 2) {
+                        player.vy = JUMP_FORCE * 0.7; // Bounce the player up
+                        return true; // Enemy defeated by jumping
+                    } else {
+                        // Enemy damages player on side collision
+                        if (player.attackCooldown <= 0) {
+                            player.takeDamage(5);
+                            player.attackCooldown = 30; // Invincibility frames
+                        }
+                    }
+                }
+                
+                // Attack player
+                if (this.attackCooldown <= 0) {
+                    const dist = Math.abs(this.x - gameState.player.x);
+                    if (dist < 200 && Math.abs(this.y - gameState.player.y) < 100) {
+                        if (Math.random() < 0.02) {
+                            const projectile = {
+                                x: this.x + this.width / 2,
+                                y: this.y + this.height / 2,
+                                width: 30,
+                                height: 30,
+                                vx: this.x < gameState.player.x ? 5 : -5,
+                                damage: 10,
+                                isEnemy: true
+                            };
+                            gameState.projectiles.push(projectile);
+                            this.attackCooldown = 60;
+                            
+                            // Play enemy shoot sound
+                            const enemyShootSound = document.getElementById('enemyShootSound');
+                            enemyShootSound.currentTime = 0;
+                            enemyShootSound.volume = 0.5;
+                            enemyShootSound.play().catch(e => console.log('Sound play failed'));
+                        }
+                    }
+                }
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                
+                // Check if hit by player projectiles
+                for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                    const proj = gameState.projectiles[i];
+                    if (!proj.isEnemy && this.checkCollision(proj)) {
+                        this.hp -= proj.damage;
+                        gameState.projectiles.splice(i, 1);
+                        if (this.hp <= 0) {
+                            return true; // Enemy defeated
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            checkCollision(obj) {
+                return this.x < obj.x + obj.width &&
+                       this.x + this.width > obj.x &&
+                       this.y < obj.y + obj.height &&
+                       this.y + this.height > obj.y;
+            }
+            
+            draw() {
+                ctx.save();
+                if (!this.facingRight) {
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(this.image, -this.x - this.width, this.y, this.width, this.height);
+                } else {
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                ctx.restore();
+                
+                // HP bar
+                ctx.fillStyle = 'red';
+                ctx.fillRect(this.x, this.y - 15, this.width, 5);
+                ctx.fillStyle = 'orange';
+                ctx.fillRect(this.x, this.y - 15, this.width * (this.hp / this.maxHp), 5);
+            }
+        }
+        
+        // Boss class
+        class Boss {
+            constructor(type, x, y) {
+                this.type = type;
+                this.x = x;
+                this.y = y;
+                this.width = 100;
+                this.height = 120;
+                this.hp = 200;
+                this.maxHp = 200;
+                this.vx = 1.5;
+                this.vy = 0;
+                this.image = images[type];
+                this.attackCooldown = 0;
+                this.facingRight = true;
+            }
+            
+            update() {
+                this.x += this.vx;
+                this.vy += GRAVITY;
+                this.y += this.vy;
+                
+                // Update facing direction
+                if (this.vx > 0) this.facingRight = true;
+                if (this.vx < 0) this.facingRight = false;
+                
+                // Bounce off walls
+                if (this.x < 0 || this.x + this.width > canvas.width) {
+                    this.vx *= -1;
+                }
+                
+                // Platform collision
+                for (let platform of gameState.platforms) {
+                    if (this.checkCollision(platform)) {
+                        if (this.vy > 0 && this.y + this.height - this.vy <= platform.y) {
+                            this.y = platform.y - this.height;
+                            this.vy = 0;
+                        }
+                    }
+                }
+                
+                // Check if player jumped on boss
+                const player = gameState.player;
+                if (player && this.checkCollision(player)) {
+                    // Player is above boss and falling down
+                    if (player.vy > 0 && player.y < this.y + this.height / 2) {
+                        player.vy = JUMP_FORCE * 0.7; // Bounce the player up
+                        this.hp -= 30; // Boss takes damage from jump
+                        if (this.hp <= 0) {
+                            return true; // Boss defeated
+                        }
+                    } else {
+                        // Boss damages player on side collision
+                        if (player.attackCooldown <= 0) {
+                            player.takeDamage(10);
+                            player.attackCooldown = 30; // Invincibility frames
+                        }
+                    }
+                }
+                
+                // Boss attacks more frequently
+                if (this.attackCooldown <= 0) {
+                    if (Math.random() < 0.03) {
+                        // Single shot aimed at player
+                        const projectile = {
+                            x: this.x + this.width / 2,
+                            y: this.y + this.height / 2,
+                            width: 40,
+                            height: 40,
+                            vx: this.x < gameState.player.x ? 5 : -5,
+                            vy: 0,
+                            damage: 15,
+                            isEnemy: true
+                        };
+                        gameState.projectiles.push(projectile);
+                        this.attackCooldown = 60;
+                        
+                        // Play enemy shoot sound
+                        const enemyShootSound = document.getElementById('enemyShootSound');
+                        enemyShootSound.currentTime = 0;
+                        enemyShootSound.volume = 0.5;
+                        enemyShootSound.play().catch(e => console.log('Sound play failed'));
+                    }
+                }
+                if (this.attackCooldown > 0) this.attackCooldown--;
+                
+                // Check if hit by player projectiles
+                for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                    const proj = gameState.projectiles[i];
+                    if (!proj.isEnemy && this.checkCollision(proj)) {
+                        this.hp -= proj.damage;
+                        gameState.projectiles.splice(i, 1);
+                        if (this.hp <= 0) {
+                            return true; // Boss defeated
+                        }
+                    }
+                }
+                
+                return false;
+            }
+            
+            checkCollision(obj) {
+                return this.x < obj.x + obj.width &&
+                       this.x + this.width > obj.x &&
+                       this.y < obj.y + obj.height &&
+                       this.y + this.height > obj.y;
+            }
+            
+            draw() {
+                ctx.save();
+                if (!this.facingRight) {
+                    ctx.scale(-1, 1);
+                    ctx.drawImage(this.image, -this.x - this.width, this.y, this.width, this.height);
+                } else {
+                    ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+                }
+                ctx.restore();
+                
+                // HP bar
+                ctx.fillStyle = 'red';
+                ctx.fillRect(this.x, this.y - 20, this.width, 8);
+                ctx.fillStyle = 'purple';
+                ctx.fillRect(this.x, this.y - 20, this.width * (this.hp / this.maxHp), 8);
+                
+                // Boss label
+                ctx.fillStyle = 'yellow';
+                ctx.font = '12px Arial';
+                ctx.fillText('BOSS', this.x + this.width / 2 - 20, this.y - 25);
+            }
+        }
+        
+        // Character selection
+        document.querySelectorAll('.character-card').forEach(card => {
+            card.addEventListener('click', () => {
+                const character = card.dataset.character;
+                startGame(character);
+            });
+        });
+        
+        // Initialize game
+        function startGame(character) {
+            document.getElementById('characterSelect').style.display = 'none';
+            gameState.selectedCharacter = character;
+            gameState.player = new Player(character);
+            gameState.gameStarted = true;
+            
+            // Start soundtrack
+            const soundtrack = document.getElementById('soundtrack');
+            soundtrack.volume = 0.2; // Set volume to 20%
+            soundtrack.play().catch(e => {
+                console.log('Audio autoplay blocked. Click to enable sound.');
+            });
+            
+            // Create platforms (Donkey Kong style)
+            createPlatforms();
+            
+            // Spawn enemies
+            spawnEnemies();
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        function createPlatforms() {
+            const platforms = [];
+            
+            // Ground
+            for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+                platforms.push({
+                    x: x,
+                    y: canvas.height - TILE_SIZE,
+                    width: TILE_SIZE,
+                    height: TILE_SIZE,
+                    type: 'grass'
+                });
+            }
+            
+            // Lower middle platforms (reachable from ground with one jump)
+            for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+                if (x < 250 || x > canvas.width - 250) {
+                    platforms.push({
+                        x: x,
+                        y: canvas.height - TILE_SIZE - 120,
+                        width: TILE_SIZE,
+                        height: TILE_SIZE,
+                        type: 'brick'
+                    });
+                }
+            }
+            
+            // Middle platforms (reachable from lower platforms)
+            for (let x = 200; x < canvas.width - 200; x += TILE_SIZE) {
+                platforms.push({
+                    x: x,
+                    y: canvas.height - TILE_SIZE - 240,
+                    width: TILE_SIZE,
+                    height: TILE_SIZE,
+                    type: 'brick'
+                });
+            }
+            
+            // Top platforms (reachable from middle platforms)
+            for (let x = 0; x < canvas.width; x += TILE_SIZE) {
+                if (x < 200 || x > canvas.width - 200) {
+                    platforms.push({
+                        x: x,
+                        y: canvas.height - TILE_SIZE - 360,
+                        width: TILE_SIZE,
+                        height: TILE_SIZE,
+                        type: 'brick'
+                    });
+                }
+            }
+            
+            gameState.platforms = platforms;
+        }
+        
+        function spawnEnemies() {
+            const enemyTypes = ['enemy1', 'enemy2', 'enemy3'];
+            for (let i = 0; i < 5; i++) {
+                const type = enemyTypes[Math.floor(Math.random() * enemyTypes.length)];
+                const x = 200 + Math.random() * (canvas.width - 400);
+                const y = 100;
+                gameState.enemies.push(new Enemy(type, x, y));
+            }
+            updateHUD();
+        }
+        
+        function spawnBoss() {
+            const bossTypes = ['boss1', 'boss2', 'boss3'];
+            const type = bossTypes[Math.floor(Math.random() * bossTypes.length)];
+            gameState.boss = new Boss(type, canvas.width / 2 - 50, 50);
+            gameState.bossSpawned = true;
+        }
+        
+        function updateHUD() {
+            document.getElementById('hpDisplay').textContent = Math.max(0, Math.floor(gameState.player.hp));
+            document.getElementById('enemyCount').textContent = gameState.enemies.length;
+            document.getElementById('scoreDisplay').textContent = gameState.score;
+        }
+        
+        function gameOver() {
+            document.getElementById('gameOver').style.display = 'block';
+            
+            // Play game over sound
+            const gameOverSound = document.getElementById('gameOverSound');
+            gameOverSound.volume = 0.5;
+            gameOverSound.play().catch(e => console.log('Sound play failed'));
+            
+            // Stop background music
+            const soundtrack = document.getElementById('soundtrack');
+            soundtrack.pause();
+        }
+        
+        function victory() {
+            document.getElementById('victory').style.display = 'block';
+            
+            // Play victory sound
+            const victorySound = document.getElementById('victorySound');
+            victorySound.volume = 0.5;
+            victorySound.play().catch(e => console.log('Sound play failed'));
+            
+            // Stop background music
+            const soundtrack = document.getElementById('soundtrack');
+            soundtrack.pause();
+        }
+        
+        // Game loop
+        function gameLoop() {
+            if (!gameState.gameStarted) return;
+            
+            // Clear canvas
+            ctx.fillStyle = '#87CEEB';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw platforms
+            for (let platform of gameState.platforms) {
+                const img = platform.type === 'grass' ? images.tileGrass : images.tileBrick;
+                ctx.drawImage(img, platform.x, platform.y, platform.width, platform.height);
+            }
+            
+            // Update and draw player
+            if (gameState.player.hp > 0) {
+                gameState.player.update();
+                gameState.player.draw();
+            }
+            
+            // Update and draw projectiles
+            for (let i = gameState.projectiles.length - 1; i >= 0; i--) {
+                const proj = gameState.projectiles[i];
+                proj.x += proj.vx;
+                if (proj.vy) proj.y += proj.vy;
+                
+                // Update rotation for spinning effect
+                if (proj.rotation !== undefined) {
+                    proj.rotation += 0.2; // Spin speed
+                }
+                
+                // Draw projectile
+                if (proj.isEnemy) {
+                    // Draw enemy projectile with flameshot sprite
+                    ctx.save();
+                    if (proj.vx < 0) {
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(images.flameshot, -proj.x - proj.width, proj.y, proj.width, proj.height);
+                    } else {
+                        ctx.drawImage(images.flameshot, proj.x, proj.y, proj.width, proj.height);
+                    }
+                    ctx.restore();
+                } else if (proj.character === 'joshua') {
+                    // Draw Joshua's spinning axe
+                    ctx.save();
+                    ctx.translate(proj.x + proj.width / 2, proj.y + proj.height / 2);
+                    if (proj.vx < 0) {
+                        ctx.scale(-1, 1);
+                    }
+                    ctx.rotate(proj.rotation);
+                    ctx.drawImage(images.axe, -proj.width * 1.5, -proj.height * 1.5, proj.width * 3, proj.height * 3);
+                    ctx.restore();
+                } else if (proj.character === 'ferre') {
+                    // Draw Ferre's ironbeam
+                    ctx.save();
+                    if (proj.vx < 0) {
+                        ctx.scale(-1, 1);
+                        ctx.drawImage(images.ironbeam, -proj.x - proj.width * 2, proj.y, proj.width * 2, proj.height * 2);
+                    } else {
+                        ctx.drawImage(images.ironbeam, proj.x, proj.y, proj.width * 2, proj.height * 2);
+                    }
+                    ctx.restore();
+                } else {
+                    // Draw other player projectiles as yellow rectangles
+                    ctx.fillStyle = 'yellow';
+                    ctx.fillRect(proj.x, proj.y, proj.width, proj.height);
+                }
+                
+                // Check player hit
+                if (proj.isEnemy && gameState.player.checkCollision(proj)) {
+                    gameState.player.takeDamage(proj.damage);
+                    gameState.projectiles.splice(i, 1);
+                    continue;
+                }
+                
+                // Remove off-screen projectiles
+                if (proj.x < -50 || proj.x > canvas.width + 50 || proj.y > canvas.height + 50) {
+                    gameState.projectiles.splice(i, 1);
+                }
+            }
+            
+            // Update and draw enemies
+            for (let i = gameState.enemies.length - 1; i >= 0; i--) {
+                const enemy = gameState.enemies[i];
+                const defeated = enemy.update();
+                if (defeated) {
+                    gameState.enemies.splice(i, 1);
+                    gameState.score += 100;
+                    gameState.enemiesDefeated++;
+                    updateHUD();
+                    
+                    // Spawn boss when all enemies defeated
+                    if (gameState.enemies.length === 0 && !gameState.bossSpawned) {
+                        spawnBoss();
+                    }
+                } else {
+                    enemy.draw();
+                }
+            }
+            
+            // Update and draw boss
+            if (gameState.boss) {
+                const defeated = gameState.boss.update();
+                if (defeated) {
+                    gameState.score += 500;
+                    gameState.boss = null;
+                    updateHUD();
+                    victory();
+                } else {
+                    gameState.boss.draw();
+                }
+            }
+            
+            requestAnimationFrame(gameLoop);
+        }
+    </script>
+</body>
+</html>
