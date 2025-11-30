@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Operation Takedown</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Operation Takedown - Mobile</title>
     <style>
         * {
             margin: 0;
@@ -19,6 +19,9 @@
             align-items: center;
             min-height: 100vh;
             overflow: hidden;
+            margin: 0;
+            padding: 0;
+            touch-action: none;
         }
         
         #gameContainer {
@@ -26,6 +29,8 @@
             background: #0f0f1e;
             border: 4px solid #ff6b6b;
             box-shadow: 0 0 30px rgba(255, 107, 107, 0.5);
+            max-width: 100vw;
+            max-height: 100vh;
         }
         
         #gameCanvas {
@@ -33,6 +38,9 @@
             image-rendering: pixelated;
             image-rendering: -moz-crisp-edges;
             image-rendering: crisp-edges;
+            width: 100%;
+            height: auto;
+            max-width: 100vw;
         }
         
         #characterSelect {
@@ -180,6 +188,67 @@
             transform: scale(1.05);
         }
         
+        /* Mobile Controls */
+        #mobileControls {
+            position: absolute;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: none;
+            justify-content: space-between;
+            padding: 0 20px;
+            z-index: 15;
+            pointer-events: none;
+        }
+        
+        .control-group {
+            display: flex;
+            gap: 10px;
+            pointer-events: all;
+        }
+        
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            background: rgba(255, 107, 107, 0.7);
+            border: 3px solid #fff;
+            border-radius: 10px;
+            color: white;
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            touch-action: none;
+            cursor: pointer;
+        }
+        
+        .control-btn:active {
+            background: rgba(255, 107, 107, 1);
+            transform: scale(0.95);
+        }
+        
+        .control-btn.jump {
+            width: 80px;
+            height: 80px;
+            background: rgba(255, 217, 61, 0.7);
+        }
+        
+        .control-btn.jump:active {
+            background: rgba(255, 217, 61, 1);
+        }
+        
+        .control-btn.shoot {
+            width: 70px;
+            height: 70px;
+            background: rgba(107, 255, 107, 0.7);
+        }
+        
+        .control-btn.shoot:active {
+            background: rgba(107, 255, 107, 1);
+        }
+        
         #hud {
             position: absolute;
             top: 10px;
@@ -193,7 +262,7 @@
 </head>
 <body>
     <div id="gameContainer">
-        <canvas id="gameCanvas" width="1000" height="700"></canvas>
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
         
         <audio id="soundtrack" loop>
             <source src="soundtrack.mp3" type="audio/mpeg">
@@ -266,6 +335,17 @@
             <h2>VICTORY!</h2>
             <p style="color: white; font-size: 12px;">You defeated all enemies!</p>
             <button onclick="location.reload()">Play Again</button>
+        </div>
+        
+        <div id="mobileControls">
+            <div class="control-group">
+                <div class="control-btn" id="leftBtn">◄</div>
+                <div class="control-btn" id="rightBtn">►</div>
+            </div>
+            <div class="control-group">
+                <div class="control-btn jump" id="jumpBtn">▲</div>
+                <div class="control-btn shoot" id="shootBtn">●</div>
+            </div>
         </div>
     </div>
 
@@ -761,12 +841,18 @@
             gameState.player = new Player(character);
             gameState.gameStarted = true;
             
+            // Show mobile controls
+            document.getElementById('mobileControls').style.display = 'flex';
+            
             // Start soundtrack
             const soundtrack = document.getElementById('soundtrack');
             soundtrack.volume = 0.2; // Set volume to 20%
             soundtrack.play().catch(e => {
                 console.log('Audio autoplay blocked. Click to enable sound.');
             });
+            
+            // Setup mobile touch controls
+            setupMobileControls();
             
             // Create platforms (Donkey Kong style)
             createPlatforms();
@@ -791,6 +877,53 @@
                     color: color
                 });
             }
+        }
+        
+        function setupMobileControls() {
+            const leftBtn = document.getElementById('leftBtn');
+            const rightBtn = document.getElementById('rightBtn');
+            const jumpBtn = document.getElementById('jumpBtn');
+            const shootBtn = document.getElementById('shootBtn');
+            
+            // Left button
+            leftBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys['ArrowLeft'] = true;
+            });
+            leftBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys['ArrowLeft'] = false;
+            });
+            
+            // Right button
+            rightBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys['ArrowRight'] = true;
+            });
+            rightBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys['ArrowRight'] = false;
+            });
+            
+            // Jump button
+            jumpBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys['ArrowUp'] = true;
+            });
+            jumpBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys['ArrowUp'] = false;
+            });
+            
+            // Shoot button
+            shootBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[' '] = true;
+            });
+            shootBtn.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[' '] = false;
+            });
         }
         
         function createPlatforms() {
